@@ -15,6 +15,7 @@
 
 struct Particle {
   int id;
+  int test;
   double x;
   double y;
   double theta;
