@@ -32,17 +32,18 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    */
   std::default_random_engine gen;
   num_particles = 1000; // Set the number of particles to 1000 (not default);
-  normal_distribution<double> dist_x(x,std[0]);
-  normal_distribution<double> dist_y(y,std[1]);
-  normal_distribution<double> dist_theta(theta,std[2]);
-  for (int i = 0; i<num_particles;i++){
+  normal_distribution<double> dist_x(x, std[0]);
+  normal_distribution<double> dist_y(y, std[1]);
+  normal_distribution<double> dist_theta(theta, std[2]);
+  for (int i = 0; i < num_particles; i++) {
     Particle particle_;
     particle_.x = dist_x(gen);
     particle_.y = dist_y(gen);
     particle_.theta = dist_theta(gen);
-    particle_.weight = 1; 
+    particle_.weight = 1;
     particles.push_back(particle_);
   }
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[],
@@ -54,6 +55,30 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
+  std::default_random_engine gen;
+  normal_distribution<double> dist_x(0, std_pos[0]);
+  normal_distribution<double> dist_y(0, std_pos[1]);
+  normal_distribution<double> dist_theta(0, std_pos[2]);
+  double *x_;
+  double *y_;
+  double *theta_;
+  for (int i = 0; i < num_particles; i++) {
+    x_ = &particles[i].x;
+    y_ = &particles[i].y;
+    theta_ = &particles[i].theta;
+
+    // Move particle
+    *x_ = *x_ + velocity / yaw_rate *
+                    (sin(*theta_ + delta_t * yaw_rate) - sin(*theta_));
+    *y_ = *y_ + velocity / yaw_rate *
+                    (cos(*theta_) - cos(*theta_ + delta_t * yaw_rate));
+    *theta_ = *theta_ + yaw_rate * delta_t;
+
+    //Add Gaussian noise
+    *x_ += dist_x(gen);
+    *y_ += dist_y(gen);
+    *theta_ += dist_theta(gen);
+  }
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
@@ -66,6 +91,9 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
    *   probably find it useful to implement this method and use it as a helper
    *   during the updateWeights phase.
    */
+
+  // convert the observations measurement from vehicle coords to the fixed coord
+  
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
