@@ -21,6 +21,8 @@ using std::normal_distribution;
 using std::string;
 using std::vector;
 
+static std::default_random_engine gen;
+
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
   /**
    * TODO: Set the number of particles. Initialize all particles to
@@ -30,8 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  std::default_random_engine gen;
-  num_particles = 200; // Set the number of particles to 1000 (not default);
+  num_particles = 1000; // Set the number of particles to 1000 (not default);
   normal_distribution<double> dist_x(x, std[0]);
   normal_distribution<double> dist_y(y, std[1]);
   normal_distribution<double> dist_theta(theta, std[2]);
@@ -57,7 +58,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
    *  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
    *  http://www.cplusplus.com/reference/random/default_random_engine/
    */
-  std::default_random_engine gen;
   normal_distribution<double> dist_x(0, std_pos[0]);
   normal_distribution<double> dist_y(0, std_pos[1]);
   normal_distribution<double> dist_theta(0, std_pos[2]);
@@ -70,11 +70,16 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     theta_ = &particles[i].theta;
 
     // Move particle
-    *x_ = *x_ + velocity / yaw_rate *
-                    (sin(*theta_ + delta_t * yaw_rate) - sin(*theta_));
-    *y_ = *y_ + velocity / yaw_rate *
-                    (cos(*theta_) - cos(*theta_ + delta_t * yaw_rate));
-    *theta_ = *theta_ + yaw_rate * delta_t;
+    if (fabs(yaw_rate) < 0.00001) {
+      *x_ += velocity * delta_t * cos(*theta_);
+      *y_ += velocity * delta_t * sin(*theta_);
+    } else {
+      *x_ = *x_ + velocity / yaw_rate *
+                      (sin(*theta_ + delta_t * yaw_rate) - sin(*theta_));
+      *y_ = *y_ + velocity / yaw_rate *
+                      (cos(*theta_) - cos(*theta_ + delta_t * yaw_rate));
+      *theta_ = *theta_ + yaw_rate * delta_t;
+    }
 
     // Add Gaussian noise
     *x_ += dist_x(gen);
@@ -179,7 +184,6 @@ void ParticleFilter::resample() {
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
   vector<Particle> new_particles;
-  std::default_random_engine gen;
   std::uniform_int_distribution<int> uniintdist(0, num_particles - 1);
   auto index = uniintdist(gen);
 
