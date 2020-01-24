@@ -32,7 +32,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
    * NOTE: Consult particle_filter.h for more information about this method
    *   (and others in this file).
    */
-  num_particles = 1000; // Set the number of particles to 1000 (not default);
+  num_particles = 50; // Set the number of particles to 1000 (not default);
   normal_distribution<double> dist_x(x, std[0]);
   normal_distribution<double> dist_y(y, std[1]);
   normal_distribution<double> dist_theta(theta, std[2]);
@@ -70,11 +70,16 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     theta_ = &particles[i].theta;
 
     // Move particle
-    *x_ = *x_ + velocity / yaw_rate *
-                    (sin(*theta_ + delta_t * yaw_rate) - sin(*theta_));
-    *y_ = *y_ + velocity / yaw_rate *
-                    (cos(*theta_) - cos(*theta_ + delta_t * yaw_rate));
-    *theta_ = *theta_ + yaw_rate * delta_t;
+    if (fabs(yaw_rate) < 0.0001) {
+      *x_ += cos(*theta_) * velocity * delta_t;
+      *y_ += sin(*theta_) * velocity * delta_t;
+    } else {
+      *x_ = *x_ + velocity / yaw_rate *
+                      (sin(*theta_ + delta_t * yaw_rate) - sin(*theta_));
+      *y_ = *y_ + velocity / yaw_rate *
+                      (cos(*theta_) - cos(*theta_ + delta_t * yaw_rate));
+      *theta_ = *theta_ + yaw_rate * delta_t;
+    }
 
     // Add Gaussian noise
     *x_ += dist_x(gen);
@@ -137,8 +142,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       float obs_x = map_landmarks.landmark_list[j].x_f;
       float obs_y = map_landmarks.landmark_list[j].y_f;
       int id_ = map_landmarks.landmark_list[j].id_i;
-      if (fabs(obs_x - particles[i].x) <= sensor_range &&
-          fabs(obs_y - particles[i].y) <= sensor_range) {
+      double distance = dist(obs_x, obs_y, particles[i].x, particles[i].y);
+      if (distance <= sensor_range) {
         LandmarkObs point{id_, obs_x, obs_y};
         predicted.push_back(point);
       }
